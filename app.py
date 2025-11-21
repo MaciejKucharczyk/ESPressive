@@ -1,6 +1,5 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-import time
 import toml
 import paho.mqtt.client as mqtt
 import paho.mqtt.subscribe as subscribe
@@ -21,6 +20,8 @@ count = st_autorefresh(interval=refresh_interval_ms, limit=None, key="bme_refres
 
 max_len = 50 # max lenght of data list
 
+json_path = "data/data.json"
+
 if 'dist_list' not in st.session_state:
     st.session_state.dist_list = []
     
@@ -39,8 +40,10 @@ if 'pressure_list' not in st.session_state:
 # ---------------------------------------------------------------------------
 # Page config
 
-# unction to plot and adjust the chart title
-def show_plot(data_points, chart_placeholder, title, y_label):
+# function to plot and adjust the chart title
+def show_plot(json_path, chart_placeholder, title, y_label):
+    data_points = load_json(json_path, title)
+    
     timestamps_str = [item[0] for item in data_points]
     values = [item[1] for item in data_points]
     
@@ -66,13 +69,45 @@ def show_plot(data_points, chart_placeholder, title, y_label):
     ax.plot(timestamps_dt, values, marker='o', color='cyan', markersize=5)
     fig.autofmt_xdate()
     
-    ax.set_ylim(bottom=10, top=90) # min & max value
+    if y_label == "Temperatura [℃]":
+        ax.set_ylim(bottom=10, top=35) # min & max value
+        ax.axhspan(22, 28, facecolor="green", alpha=0.35)
+    elif y_label == "Ciśnienie [hPa]":
+        ax.set_ylim(bottom=900, top=1100) # min & max value
+    elif y_label == "Wilgotność [%]":   
+        ax.set_ylim(bottom=40, top=100) # min & max value
+        ax.axhspan(60, 80, facecolor="green", alpha=0.35)
+    
+    
     ax.set_title(title, color='white')
-    ax.set_xlabel("Pomiar (co 30 min)", color='gray')
+    ax.set_xlabel("godzina", color='gray')
     ax.set_ylabel(y_label, color='gray')
     
     chart_placeholder.pyplot(fig, use_container_width=False)
     plt.close(fig) # close figure to avoid warning
+    
+    
+def load_json(json_path, title):
+    try:
+        import json
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        
+        timestamps = [item["timestamp"] for item in data]
+        values = []
+        
+        if "Temperatura" in title:
+            values = [item["temperature"] for item in data]
+        elif "Wilgotność" in title:
+            values = [item["humidity"] for item in data]
+        elif "Ciśnienie" in title:
+            values = [item["pressure"] for item in data]
+        
+        data_points = list(zip(timestamps, values))
+        return data_points
+        
+    except Exception as e:
+        st.error(f"Błąd podczas rysowania wykresu: {e}")
 
 st.set_page_config(page_title="Sensor Dashboard", layout="wide")
 
@@ -112,14 +147,6 @@ else:
         temp_float, hum, pressure, timestamp = get_message_bme(mqtt_topic_bme, mqtt_server)
         temp_display = int(temp_float) 
         
-        # Adding data to session state lists
-        st.session_state.hum_list.append((timestamp, hum))
-        st.session_state.temp_list.append((timestamp, temp_float))
-        st.session_state.pressure_list.append((timestamp, pressure)) # pressure not used now
-        
-        st.session_state.hum_list = st.session_state.hum_list[-max_len:]
-        st.session_state.temp_list = st.session_state.temp_list[-max_len:]
-        st.session_state.pressure_list = st.session_state.pressure_list[-max_len:] 
     except Exception as e:
         status_placeholder.error(f"Błąd pobierania BME: {e}")
         temp_float, hum, pressure = 0.0, 0.0, 0.0
@@ -127,14 +154,11 @@ else:
 
     # choosable data based on selected page
     value_to_show = 0.0
-    data_list = []
     label = "Brak danych"
 
     if page == "Odległość":
         try:
             value_raw, timestamp = get_message_distance(mqtt_topic_distance, mqtt_server)
-            st.session_state.dist_list.append((timestamp, value_raw))
-            st.session_state.dist_list = st.session_state.dist_list[-max_len:]
             value_to_show = value_raw
             data_list = st.session_state.dist_list
             label = "Odległość [cm]"
@@ -143,12 +167,10 @@ else:
             
     elif page == "Wilgotność":
         value_to_show = hum
-        data_list = st.session_state.hum_list
         label = "Wilgotność [%]"
         
     elif page == "Temperatura":
         value_to_show = temp_display
-        data_list = st.session_state.temp_list
         label = "Temperatura [℃]"
 
     with left:
@@ -170,8 +192,5 @@ else:
         
     with right:
         # plot figure
-        if data_list:
-            plot_title = f"{page} (ostatnie 24h)"
-            show_plot(data_list, st.empty(), plot_title, label)
-        else:
-            st.warning("Oczekiwanie na pierwsze dane z czujnika...")
+        plot_title = f"{page} (ostatnie 24h)"
+        show_plot(json_path, st.empty(), plot_title, label)
