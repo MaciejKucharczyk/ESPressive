@@ -1,6 +1,5 @@
 import json
 from paho.mqtt import client as mqtt
-import toml
 from client import get_message_bme
 
 DATA_FILE = "data/data.json"
