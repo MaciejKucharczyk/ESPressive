@@ -6,10 +6,8 @@ from client import get_message_bme
 DATA_FILE = "data/data.json"
 MAX_SAMPLES = 100
 
-config = toml.load(".streamlit/secrets.toml")
-mqtt_server = config["mqtt"]["broker"]
-mqtt_topic_distance = config["mqtt"]["topic_distance"]
-mqtt_topic_bme = config["mqtt"]["topic_bme"]
+mqtt_server = "broker.hivemq.com"
+mqtt_topic_bme = "esp32/sensor/BME280"
 
 result = {}
 
