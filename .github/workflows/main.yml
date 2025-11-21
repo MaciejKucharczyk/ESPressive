@@ -1,0 +1,31 @@
+name: Update data.json
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"   # new sample every 15 minutes
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install MQTT client
+        run: pip install paho-mqtt
+
+      - name: Run updater
+        run: python update_json.py
+
+      - name: Commit changes
+        run: |
+          git config --global user.email "kucharczykm01@gmail.com"
+          git config --global user.name "MaciejKucharczyk"
+          git add data.json
+          git commit -m "Update data.json" || echo "No changes"
+          git push
