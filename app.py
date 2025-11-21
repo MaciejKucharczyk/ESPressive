@@ -40,9 +40,20 @@ if 'pressure_list' not in st.session_state:
 # Page config
 
 # unction to plot and adjust the chart title
-def show_plot(value_list, chart_placeholder, title, y_label):
+def show_plot(data_points, chart_placeholder, title, y_label):
+    timestamps_str = [item[0] for item in data_points]
+    values = [item[1] for item in data_points]
+    
+    date_format = "%Y-%m-%d %H:%M:%S" 
+    try:
+        timestamps_dt = [datetime.datetime.strptime(ts, date_format) for ts in timestamps_str]
+    except (ValueError, TypeError):
+        # Use original strings if parsing fails
+        timestamps_dt = timestamps_str
+    
     fig, ax = plt.subplots(figsize=(4,2))
     fig.patch.set_facecolor("#262f40")
+    
     ax.set_facecolor("#0e1117")
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     ax.tick_params(axis='x', colors='gray')
@@ -51,11 +62,15 @@ def show_plot(value_list, chart_placeholder, title, y_label):
     ax.spines['left'].set_color('gray')
     ax.spines['top'].set_color('gray')
     ax.spines['right'].set_color('gray')
-    ax.plot(value_list, marker='o', color='cyan', markersize=5)
+    
+    ax.plot(timestamps_dt, values, marker='o', color='cyan', markersize=5)
+    fig.autofmt_xdate()
+    
     ax.set_ylim(bottom=10, top=90) # min & max value
     ax.set_title(title, color='white')
     ax.set_xlabel("Pomiar (co 30 min)", color='gray')
     ax.set_ylabel(y_label, color='gray')
+    
     chart_placeholder.pyplot(fig, use_container_width=False)
     plt.close(fig) # close figure to avoid warning
 
@@ -98,9 +113,9 @@ else:
         temp_display = int(temp_float) 
         
         # Adding data to session state lists
-        st.session_state.hum_list.append(hum)
-        st.session_state.temp_list.append(temp_float)
-        st.session_state.pressure_list.append(pressure) # pressure not used now
+        st.session_state.hum_list.append((timestamp, hum))
+        st.session_state.temp_list.append((timestamp, temp_float))
+        st.session_state.pressure_list.append((timestamp, pressure)) # pressure not used now
         
         st.session_state.hum_list = st.session_state.hum_list[-max_len:]
         st.session_state.temp_list = st.session_state.temp_list[-max_len:]
@@ -118,7 +133,7 @@ else:
     if page == "Odległość":
         try:
             value_raw, timestamp = get_message_distance(mqtt_topic_distance, mqtt_server)
-            st.session_state.dist_list.append(value_raw)
+            st.session_state.dist_list.append((timestamp, value_raw))
             st.session_state.dist_list = st.session_state.dist_list[-max_len:]
             value_to_show = value_raw
             data_list = st.session_state.dist_list
