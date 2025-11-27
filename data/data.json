@@ -1,11 +1,5 @@
 [
   {
-    "temperature": 22.25,
-    "humidity": 81.43,
-    "pressure": 991.06,
-    "timestamp": "2025-11-25 14:51:25"
-  },
-  {
     "temperature": 23.25,
     "humidity": 82.68,
     "pressure": 991.14,
@@ -598,5 +592,11 @@
     "humidity": 88.23,
     "pressure": 1006.75,
     "timestamp": "2025-11-27 05:49:44"
+  },
+  {
+    "temperature": 20.83,
+    "humidity": 88.58,
+    "pressure": 1007.12,
+    "timestamp": "2025-11-27 06:18:51"
   }
 ]
