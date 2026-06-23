@@ -10,24 +10,37 @@ services:
       - ./api:/app
     image: api:v1
     container_name: api
+    depends_on:
+    - database
+    networks:
+    - backend
   
   broker:
     build:
       context: ./broker
       dockerfile: Dockerfile
     ports: 
-      - 1883:1883
+      - 8883:8883
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./broker/pwfile:/mosquitto/config/pwfile
     image: broker:v1
     container_name: broker
+    networks:
+    - backend
   
   database:
     build:
       context: ./database
       dockerfile: Dockerfile
-    ports:
-      - 5432:5432
     image: database:v1
     container_name: postgres
+    networks:
+    - backend
+
+networks:
+  backend:
+    driver: bridge
 
   # ingestor:
   #   build:
